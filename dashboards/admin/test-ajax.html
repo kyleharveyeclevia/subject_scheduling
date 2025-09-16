@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AJAX Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>AJAX Test for get_courses.php</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Basic AJAX Call</h3>
+        <button onclick="testBasicAjax()">Test Basic AJAX</button>
+        <div id="basic-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Test get_courses.php with Parameters</h3>
+        <button onclick="testGetCourses()">Test get_courses.php</button>
+        <div id="courses-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Test with Different Parameters</h3>
+        <button onclick="testDifferentParams()">Test Different Parameters</button>
+        <div id="different-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 4: Check Browser Console</h3>
+        <p class="info">Open Developer Tools (F12) and check the Console tab for any errors.</p>
+        <button onclick="console.log('Manual console test - this should appear in console')">Test Console</button>
+    </div>
+
+    <script>
+        function testBasicAjax() {
+            const resultDiv = document.getElementById('basic-result');
+            resultDiv.innerHTML = '<p class="info">Testing basic AJAX...</p>';
+            
+            fetch('test-simple.php')
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+                    resultDiv.innerHTML = '<p class="success">✅ AJAX call successful!</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                })
+                .catch(error => {
+                    console.error('AJAX error:', error);
+                    resultDiv.innerHTML = '<p class="error">❌ AJAX error: ' + error.message + '</p>';
+                });
+        }
+        
+        function testGetCourses() {
+            const resultDiv = document.getElementById('courses-result');
+            resultDiv.innerHTML = '<p class="info">Testing get_courses.php...</p>';
+            
+            const url = 'get_courses.php?year_level=1st Year&semester=first';
+            console.log('Testing URL:', url);
+            
+            fetch(url)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+                    resultDiv.innerHTML = '<p class="success">✅ get_courses.php call successful!</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                })
+                .catch(error => {
+                    console.error('get_courses.php error:', error);
+                    resultDiv.innerHTML = '<p class="error">❌ get_courses.php error: ' + error.message + '</p>';
+                });
+        }
+        
+        function testDifferentParams() {
+            const resultDiv = document.getElementById('different-result');
+            resultDiv.innerHTML = '<p class="info">Testing with different parameters...</p>';
+            
+            // Test different year level formats
+            const testParams = [
+                { year_level: '1st', semester: 'first' },
+                { year_level: '1st Year', semester: 'first' },
+                { year_level: '1', semester: '1' },
+                { year_level: '1st', semester: '1st' }
+            ];
+            
+            let results = '<h4>Testing different parameter combinations:</h4>';
+            
+            testParams.forEach((params, index) => {
+                const url = `get_courses.php?year_level=${encodeURIComponent(params.year_level)}&semester=${encodeURIComponent(params.semester)}`;
+                console.log(`Test ${index + 1}:`, url);
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        results += `<p><strong>${params.year_level} / ${params.semester}:</strong> ${data.success ? '✅ Success' : '❌ Failed'} - ${data.message || 'No message'}</p>`;
+                        if (data.courses) {
+                            results += `<p>Courses found: ${data.courses.length}</p>`;
+                        }
+                        resultDiv.innerHTML = results;
+                    })
+                    .catch(error => {
+                        results += `<p><strong>${params.year_level} / ${params.semester}:</strong> ❌ Error: ${error.message}</p>`;
+                        resultDiv.innerHTML = results;
+                    });
+            });
+        }
+        
+        // Auto-run basic test when page loads
+        window.onload = function() {
+            console.log('Page loaded, running basic test...');
+            testBasicAjax();
+        };
+    </script>
+</body>
+</html>

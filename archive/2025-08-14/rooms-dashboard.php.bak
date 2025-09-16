@@ -1,0 +1,672 @@
+<?php
+session_start();
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    header('Location: ../../index.php');
+    exit();
+}
+
+require_once '../../config/database.php';
+
+$db = new Database();
+$message = '';
+$message_type = '';
+
+// Create rooms table if it doesn't exist
+try {
+    $db->query("CREATE TABLE IF NOT EXISTS `rooms` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `room_name` varchar(100) NOT NULL,
+        `capacity` int(11) NOT NULL,
+        `status` enum('available','unavailable') NOT NULL DEFAULT 'available',
+        `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+        `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `room_name` (`room_name`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    $db->execute();
+    
+    // Check if we need to insert sample data
+    $db->query("SELECT COUNT(*) as count FROM `rooms`");
+    $count = $db->single();
+    
+    if ($count && $count['count'] == 0) {
+        $sampleRooms = [
+            ['Room 101', 30, 'available'],
+            ['Room 102', 25, 'available'],
+            ['Lab A', 20, 'available'],
+            ['Conference Room', 15, 'unavailable'],
+            ['Computer Lab', 25, 'available']
+        ];
+        
+        foreach ($sampleRooms as $room) {
+            $db->query("INSERT INTO `rooms` (`room_name`, `capacity`, `status`) VALUES (?, ?, ?)");
+            $db->bind(1, $room[0]);
+            $db->bind(2, $room[1], PDO::PARAM_INT);
+            $db->bind(3, $room[2]);
+            $db->execute();
+        }
+    }
+    
+} catch (Exception $e) {
+    $message = 'Error initializing database: ' . $e->getMessage();
+    $message_type = 'error';
+}
+
+// Fetch all rooms
+$rooms = [];
+try {
+    // Verify database connection
+    if (!($db instanceof Database)) {
+        throw new Exception('Database connection failed');
+    }
+    
+    // Create rooms table if it doesn't exist (in case it was missed earlier)
+    $db->query("CREATE TABLE IF NOT EXISTS `rooms` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `room_name` varchar(100) NOT NULL,
+        `capacity` int(11) NOT NULL,
+        `status` enum('available','unavailable') NOT NULL DEFAULT 'available',
+        `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+        `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `room_name` (`room_name`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    $db->execute();
+    
+    // Check if we need to insert sample data
+    $db->query("SELECT COUNT(*) as count FROM `rooms`");
+    $count = $db->single();
+    
+    if ($count && $count['count'] == 0) {
+        $sampleRooms = [
+            ['Room 101', 30, 'available'],
+            ['Room 102', 25, 'available'],
+            ['Lab A', 20, 'available'],
+            ['Conference Room', 15, 'unavailable'],
+            ['Computer Lab', 25, 'available']
+        ];
+        
+        foreach ($sampleRooms as $room) {
+            $db->query("INSERT INTO `rooms` (`room_name`, `capacity`, `status`) VALUES (?, ?, ?)");
+            $db->bind(1, $room[0]);
+            $db->bind(2, $room[1], PDO::PARAM_INT);
+            $db->bind(3, $room[2]);
+            $db->execute();
+        }
+    }
+    
+    // Fetch all rooms
+    $db->query("SELECT * FROM `rooms` ORDER BY room_name ASC");
+    $result = $db->resultset();
+    $rooms = is_array($result) ? $result : [];
+    
+} catch (Exception $e) {
+    $message = 'Error initializing rooms data: ' . $e->getMessage();
+    $message_type = 'error';
+    error_log('Rooms Dashboard Error: ' . $e->getMessage());
+}
+
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action'])) {
+        switch ($_POST['action']) {
+            case 'add_room':
+                $room_name = trim($_POST['room_name']);
+                $capacity = intval($_POST['capacity']);
+                $status = $_POST['status'] === 'available' ? 'available' : 'unavailable';
+                
+                try {
+                    $db->query("INSERT INTO rooms (room_name, capacity, status) VALUES (?, ?, ?)");
+                    $db->bind(1, $room_name);
+                    $db->bind(2, $capacity, PDO::PARAM_INT);
+                    $db->bind(3, $status);
+                    $db->execute();
+                    $message = 'Room added successfully';
+                    $message_type = 'success';
+                } catch (Exception $e) {
+                    $message = 'Error adding room: ' . $e->getMessage();
+                    $message_type = 'error';
+                }
+                break;
+                
+            case 'update_room':
+                $room_id = intval($_POST['room_id']);
+                $room_name = trim($_POST['room_name']);
+                $capacity = intval($_POST['capacity']);
+                $status = $_POST['status'] === 'available' ? 'available' : 'unavailable';
+                
+                try {
+                    $db->query("UPDATE rooms SET room_name = ?, capacity = ?, status = ? WHERE id = ?");
+                    $db->bind(1, $room_name);
+                    $db->bind(2, $capacity, PDO::PARAM_INT);
+                    $db->bind(3, $status);
+                    $db->bind(4, $room_id, PDO::PARAM_INT);
+                    $db->execute();
+                    $message = 'Room updated successfully';
+                    $message_type = 'success';
+                } catch (Exception $e) {
+                    $message = 'Error updating room: ' . $e->getMessage();
+                    $message_type = 'error';
+                }
+                break;
+                
+            case 'delete_room':
+                $room_id = intval($_POST['room_id']);
+                try {
+                    $db->query("DELETE FROM rooms WHERE id = ?");
+                    $db->bind(1, $room_id, PDO::PARAM_INT);
+                    $db->execute();
+                    $message = 'Room deleted successfully';
+                    $message_type = 'success';
+                } catch (Exception $e) {
+                    $message = 'Error deleting room: ' . $e->getMessage();
+                    $message_type = 'error';
+                }
+                break;
+        }
+    }
+}
+
+// Fetch all rooms
+$rooms = [];
+try {
+    $db->query("SELECT * FROM rooms ORDER BY room_name");
+    $rooms = $db->resultset();
+} catch (Exception $e) {
+    $message = 'Error fetching rooms: ' . $e->getMessage();
+    $message_type = 'error';
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rooms Dashboard - Subject Scheduling System</title>
+    <link rel="stylesheet" href="../../assets/css/style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="admin-sidebar" aria-expanded="true">
+            <div class="sidebar-header">
+                <div class="admin-profile">
+                    <div class="admin-avatar"><i class="fas fa-user-shield"></i></div>
+                    <div class="admin-info">
+                        <h4><?php echo htmlspecialchars($_SESSION['full_name']); ?></h4>
+                        <span>Administrator</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <ul class="nav-menu">
+                    <li class="nav-item"><a href="dashboard.php" class="nav-link"><i class="fas fa-tachometer-alt"></i><span>Dashboard Overview</span></a></li>
+                    <li class="nav-item"><a href="manage-users.php" class="nav-link"><i class="fas fa-users"></i><span>Manage User Accounts</span></a></li>
+                    <li class="nav-item"><a href="manage-scheduling.php" class="nav-link active"><i class="fas fa-calendar-alt"></i><span>Manage Scheduling Information</span></a></li>
+                    <li class="nav-item"><a href="generate-schedule.php" class="nav-link"><i class="fas fa-magic"></i><span>Generate Schedule</span></a></li>
+                    <li class="nav-item"><a href="export-schedule.php" class="nav-link"><i class="fas fa-download"></i><span>Export/Download Schedule</span></a></li>
+                    <li class="nav-item"><a href="view-reports.php" class="nav-link"><i class="fas fa-chart-bar"></i><span>View Reports</span></a></li>
+                    <li class="nav-item"><a href="system-settings.php" class="nav-link"><i class="fas fa-cogs"></i><span>System Settings</span></a></li>
+                </ul>
+                <div class="sidebar-footer">
+                    <a href="../../auth/logout.php" class="nav-link logout-link"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="admin-main">
+            <div class="main-header">
+                <h1 class="page-title"><i class="fas fa-door-open"></i> Rooms Dashboard</h1>
+                <button id="headerSidebarToggle" class="sidebar-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+            <div class="dashboard-switcher" aria-label="Quick switch dashboards">
+                <a href="teacher-dashboard.php" class="switch-link <?php echo basename(__FILE__)==='teacher-dashboard.php'?'active':''; ?>">
+                    <i class="fas fa-chalkboard-teacher"></i> Teachers
+                </a>
+                <a href="rooms-dashboard.php" class="switch-link <?php echo basename(__FILE__)==='rooms-dashboard.php'?'active':''; ?>">
+                    <i class="fas fa-door-open"></i> Rooms
+                </a>
+                <a href="subjects-dashboard.php" class="switch-link <?php echo basename(__FILE__)==='subjects-dashboard.php'?'active':''; ?>">
+                    <i class="fas fa-book"></i> Subjects
+                </a>
+                <a href="sections-dashboard.php" class="switch-link <?php echo basename(__FILE__)==='sections-dashboard.php'?'active':''; ?>">
+                    <i class="fas fa-users"></i> Sections
+                </a>
+            </div>
+            <style>
+                .dashboard-switcher{display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0 1rem}
+                .dashboard-switcher .switch-link{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem .75rem;border:1px solid #e2e8f0;border-radius:999px;background:#fff;color:#334155;text-decoration:none;font-weight:500}
+                .dashboard-switcher .switch-link.active{background:#eef2ff;border-color:#6366f1;color:#3730a3}
+                .dashboard-switcher .switch-link:hover{background:#f8fafc;border-color:#cbd5e1}
+            </style>
+            <div class="main-content">
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h2 class="card-title">Rooms Management</h2>
+                            <button class="btn btn-primary" id="openAddRoomModal">
+                                <i class="fas fa-plus"></i> Add New Room
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <?php if (!empty($message)): ?>
+                        <div class="alert alert-<?php echo $message_type === 'error' ? 'danger' : $message_type; ?> m-4">
+                            <i class="fas fa-<?php echo $message_type === 'success' ? 'check-circle' : 'exclamation-circle'; ?>"></i>
+                            <?php echo htmlspecialchars($message); ?>
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Room Name</th>
+                                        <th>Capacity</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($rooms)): ?>
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                <i class="fas fa-door-open fa-2x d-block mb-2"></i>
+                                                No rooms found. Add your first room to get started.
+                                            </td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php 
+                                        foreach ($rooms as $room): 
+                                            $statusClass = $room['status'] === 'available' ? 'success' : 'secondary';
+                                        ?>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-door-open text-muted me-2"></i>
+                                                    <div>
+                                                        <div class="fw-medium"><?= htmlspecialchars($room['room_name']) ?></div>
+                                                        <small class="text-muted">ID: <?= htmlspecialchars($room['id']) ?></small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td><?= htmlspecialchars($room['capacity']) ?> <small class="text-muted">students</small></td>
+                                            <td>
+                                                <span class="badge bg-<?= $statusClass ?>">
+                                                    <?= ucfirst(htmlspecialchars($room['status'])) ?>
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary edit-room" 
+                                                    data-id="<?= htmlspecialchars($room['id']) ?>"
+                                                    data-name="<?= htmlspecialchars($room['room_name']) ?>"
+                                                    data-capacity="<?= htmlspecialchars($room['capacity']) ?>"
+                                                    data-status="<?= htmlspecialchars($room['status']) ?>">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger ms-1 delete-room" 
+                                                    data-id="<?= htmlspecialchars($room['id']) ?>">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                Showing <span class="fw-medium"><?php echo count($rooms); ?></span> rooms
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <?php include __DIR__ . '/partials/modals.php'; ?>
+    
+    <!-- Add Room Modal -->
+    <div class="modal fade" id="addRoomModal" tabindex="-1" aria-labelledby="addRoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form id="addRoomForm" method="POST" class="needs-validation" novalidate>
+                    <input type="hidden" name="action" value="add_room">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="addRoomModalLabel">
+                            <i class="fas fa-plus-circle me-2"></i>Add New Room
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label for="room_name" class="form-label fw-medium">Room Name <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-door-open"></i></span>
+                                <input type="text" class="form-control" id="room_name" name="room_name" 
+                                       placeholder="e.g., Room 101, Computer Lab" required>
+                            </div>
+                            <div class="invalid-feedback">Please enter a room name.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="capacity" class="form-label fw-medium">Capacity <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                <input type="number" class="form-control" id="capacity" name="capacity" 
+                                       min="1" placeholder="e.g., 30" required>
+                            </div>
+                            <div class="invalid-feedback">Please enter a valid capacity (minimum 1).</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="status" class="form-label fw-medium">Status</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="available" selected>Available</option>
+                                    <option value="unavailable">Unavailable</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i> Add Room
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Room Modal -->
+    <div class="modal fade" id="editRoomModal" tabindex="-1" aria-labelledby="editRoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form id="editRoomForm" method="POST" class="needs-validation" novalidate>
+                    <input type="hidden" name="action" value="update_room">
+                    <input type="hidden" id="edit_room_id" name="room_id">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="editRoomModalLabel">
+                            <i class="fas fa-edit me-2"></i>Edit Room
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label for="edit_room_name" class="form-label fw-medium">Room Name <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-door-open"></i></span>
+                                <input type="text" class="form-control" id="edit_room_name" name="room_name" 
+                                       placeholder="e.g., Room 101, Computer Lab" required>
+                            </div>
+                            <div class="invalid-feedback">Please enter a room name.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_capacity" class="form-label fw-medium">Capacity <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                <input type="number" class="form-control" id="edit_capacity" name="capacity" 
+                                       min="1" placeholder="e.g., 30" required>
+                            </div>
+                            <div class="invalid-feedback">Please enter a valid capacity (minimum 1).</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_status" class="form-label fw-medium">Status</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                                <select class="form-select" id="edit_status" name="status" required>
+                                    <option value="available">Available</option>
+                                    <option value="unavailable">Unavailable</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteRoomModal" tabindex="-1" aria-labelledby="deleteRoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form id="deleteRoomForm" method="POST">
+                    <input type="hidden" name="action" value="delete_room">
+                    <input type="hidden" id="delete_room_id" name="room_id">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="deleteRoomModalLabel">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="text-center mb-4">
+                            <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                            </div>
+                        </div>
+                        <h5 class="text-center mb-3">Are you sure you want to delete this room?</h5>
+                        <p class="text-muted text-center mb-0">
+                            You are about to delete <strong id="deleteRoomName"></strong>. This action cannot be undone.
+                        </p>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i> Delete Room
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div class="modal fade" id="notificationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3">
+                        <i id="notificationIcon" class="fas fa-info-circle fa-3x text-primary"></i>
+                    </div>
+                    <h5 id="notificationMessage" class="mb-0"></h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script>
+        // Show notification function (matching teacher dashboard)
+        function showNotice(message, type = 'info') {
+            const modal = document.getElementById('notificationModal');
+            const icon = document.getElementById('notificationIcon');
+            const messageEl = document.getElementById('notificationMessage');
+            
+            if (!modal || !icon || !messageEl) return;
+            
+            // Set icon and styles based on type
+            const icons = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                warning: 'exclamation-triangle',
+                info: 'info-circle'
+            };
+            
+            icon.className = `fas fa-${icons[type] || 'info-circle'} text-${type === 'error' ? 'danger' : type} me-2`;
+            messageEl.textContent = message;
+            
+            // Show modal
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                if (document.body.contains(modal)) {
+                    bsModal.hide();
+                }
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Form validation
+            (function () {
+                'use strict';
+                
+                // Fetch all forms that need validation
+                const forms = document.querySelectorAll('.needs-validation');
+                
+                // Loop over them and prevent submission
+                Array.from(forms).forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        if (!form.checkValidity()) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                        
+                        form.classList.add('was-validated');
+                    }, false);
+                });
+            })();
+
+            // Handle edit room button clicks with event delegation
+            document.addEventListener('click', function(e) {
+                // Edit button
+                const editBtn = e.target.closest('.edit-room');
+                if (editBtn) {
+                    e.preventDefault();
+                    const id = editBtn.getAttribute('data-id');
+                    const name = editBtn.getAttribute('data-name');
+                    const capacity = editBtn.getAttribute('data-capacity');
+                    const status = editBtn.getAttribute('data-status');
+                    
+                    document.getElementById('edit_room_id').value = id;
+                    document.getElementById('edit_room_name').value = name;
+                    document.getElementById('edit_capacity').value = capacity;
+                    document.getElementById('edit_status').value = status;
+                    
+                    // Reset validation state
+                    const form = document.getElementById('editRoomForm');
+                    form.classList.remove('was-validated');
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('editRoomModal'));
+                    modal.show();
+                }
+                
+                // Delete button
+                const deleteBtn = e.target.closest('.delete-room');
+                if (deleteBtn) {
+                    e.preventDefault();
+                    const id = deleteBtn.getAttribute('data-id');
+                    const name = deleteBtn.getAttribute('data-name');
+                    
+                    document.getElementById('delete_room_id').value = id;
+                    document.getElementById('deleteRoomName').textContent = name;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('deleteRoomModal'));
+                    modal.show();
+                }
+            });
+
+            // Open Add Room Modal
+            const openAddRoomModal = document.getElementById('openAddRoomModal');
+            if (openAddRoomModal) {
+                openAddRoomModal.addEventListener('click', function() {
+                    // Reset form
+                    const form = document.getElementById('addRoomForm');
+                    form.reset();
+                    form.classList.remove('was-validated');
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
+                    modal.show();
+                });
+            }
+        
+            // Handle form submissions with fetch API
+            async function handleFormSubmit(form, successMessage) {
+                try {
+                    const formData = new FormData(form);
+                    const response = await fetch('rooms-dashboard.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showNotice(successMessage || 'Operation completed successfully', 'success');
+                        // Reload the page to show updated data
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        showNotice(result.message || 'An error occurred', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showNotice('An error occurred while processing your request', 'error');
+                }
+            }
+
+            // Add Room Form Submission
+            const addRoomForm = document.getElementById('addRoomForm');
+            if (addRoomForm) {
+                addRoomForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    if (this.checkValidity()) {
+                        handleFormSubmit(this, 'Room added successfully');
+                    }
+                });
+            }
+
+            // Edit Room Form Submission
+            const editRoomForm = document.getElementById('editRoomForm');
+            if (editRoomForm) {
+                editRoomForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    if (this.checkValidity()) {
+                        handleFormSubmit(this, 'Room updated successfully');
+                    }
+                });
+            }
+
+            // Delete Room Form Submission
+            const deleteRoomForm = document.getElementById('deleteRoomForm');
+            if (deleteRoomForm) {
+                deleteRoomForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    if (confirm('Are you sure you want to delete this room? This action cannot be undone.')) {
+                        handleFormSubmit(this, 'Room deleted successfully');
+                    }
+                });
+            }
+
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });        
+    </script>
+</body>
+</html>

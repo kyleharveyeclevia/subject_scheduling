@@ -1,0 +1,2415 @@
+<?php
+session_start();
+
+// Check if user is logged in and is admin
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    header('Location: ../../index.php');
+    exit();
+}
+
+require_once __DIR__ . '/../../classes/User.php';
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Schedule - Subject Scheduling System</title>
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+
+    <div class="admin-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="admin-profile">
+                    <div class="admin-avatar">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="admin-info">
+                        <h4><?php echo htmlspecialchars($_SESSION['full_name']); ?></h4>
+                        <span>Administrator</span>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="dashboard.php" class="nav-link">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard Overview</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="manage-users.php" class="nav-link">
+                            <i class="fas fa-users"></i>
+                            <span>Manage User Accounts</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="manage-scheduling.php" class="nav-link">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Manage Scheduling Information</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                    </li>
+                    <li class="nav-item">
+                        <a href="generate-schedule.php" class="nav-link active">
+                            <i class="fas fa-magic"></i>
+                            <span>Generate Schedule</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="export-schedule.php" class="nav-link">
+                            <i class="fas fa-download"></i>
+                            <span>Export/Download Schedule</span>
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="sidebar-footer">
+                    <a href="../../auth/logout.php" class="nav-link logout-link">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="admin-main">
+            <div class="main-header">
+                <h1 class="page-title">
+                    <i class="fas fa-magic"></i> Generate Schedule
+                </h1>
+                <button id="headerSidebarToggle" class="sidebar-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <!-- Main Dashboard Navigation Cards -->
+            <div class="dashboard-navigation-cards">
+                <a href="Instructor-dashboard.php" class="dashboard-card-nav" data-dashboard="instructors">
+                    <div class="dashboard-card-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        </div>
+                    <div class="dashboard-card-content">
+                        <h3>Instructors</h3>
+                        <p>Manage Instructors</p>
+                        </div>
+                    </a>
+                <a href="Courses-dashboard.php" class="dashboard-card-nav" data-dashboard="courses">
+                    <div class="dashboard-card-icon">
+                        <i class="fas fa-book"></i>
+                        </div>
+                    <div class="dashboard-card-content">
+                        <h3>Courses</h3>
+                        <p>Manage Courses</p>
+                        </div>
+                    </a>
+                <a href="academic-year-dashboard.php" class="dashboard-card-nav" data-dashboard="academic-year">
+                    <div class="dashboard-card-icon">
+                        <i class="fas fa-calendar"></i>
+                        </div>
+                    <div class="dashboard-card-content">
+                        <h3>Academic Year</h3>
+                        <p>Manage Academic Years</p>
+                        </div>
+                    </a>
+                <a href="rooms-dashboard.php" class="dashboard-card-nav" data-dashboard="rooms">
+                    <div class="dashboard-card-icon">
+                        <i class="fas fa-door-open"></i>
+                        </div>
+                    <div class="dashboard-card-content">
+                        <h3>Rooms</h3>
+                        <p>Manage Rooms</p>
+                        </div>
+                    </a>
+                <a href="sections-dashboard.php" class="dashboard-card-nav" data-dashboard="sections">
+                    <div class="dashboard-card-icon">
+                        <i class="fas fa-users"></i>
+                </div>
+                    <div class="dashboard-card-content">
+                        <h3>Sections</h3>
+                        <p>Manage Sections</p>
+                </div>
+                </a>
+            </div>
+
+            <div class="main-content">
+                <!-- Backdrop for centered expanded table -->
+                <div class="timetable-backdrop" id="timetableBackdrop"></div>
+                <div class="timetables-container">
+                    <div class="timetables-header">
+                        <div class="header-left">
+                    <h2 class="timetables-title">
+                                <i class="fas fa-calendar-alt"></i> Generate Schedule
+                    </h2>
+                        </div>
+                    </div>
+                    
+                    <!-- Filter Dropdowns -->
+                    <div class="filter-dropdowns" style="margin-top: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <!-- First row: Year and Section, Semester -->
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                            <label for="sectionSelect" style="font-weight: 500; color: #374151; font-size: 0.875rem;">Year and Section *</label>
+                            <select id="sectionSelect" name="section_id" required style="padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; background: white; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none'">
+                                <option value="">Select Year and Section</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                            <label for="semesterSelect" style="font-weight: 500; color: #374151; font-size: 0.875rem;">Semester *</label>
+                            <select id="semesterSelect" name="semester" required style="padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; background: white; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none'" disabled>
+                                <option value="">Select Semester</option>
+                            </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Second row: Course dropdown, Day Selection, and Add Schedule Button -->
+                        <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                            <!-- Course dropdown -->
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <label for="courseSelect" style="font-weight: 500; color: #374151; font-size: 0.875rem;">Course Title *</label>
+                                <button type="button" id="refreshCourses" style="background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'" title="Refresh courses list">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <select id="courseSelect" name="course_id" required style="padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; background: white; transition: border-color 0.2s, box-shadow 0.2s; flex: 1;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none'" disabled>
+                                <option value="">Select Course</option>
+                            </select>
+                                    <div id="courseUnitsDisplay" style="min-width: 60px; padding: 0.75rem; background: #f8fafc; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-weight: 600; color: #374151; text-align: center; display: flex; align-items: center; justify-content: center;">
+                                        Units
+                                    </div>
+                        </div>
+                    </div>
+                    
+                            <!-- Day Selection -->
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                                <label for="daySelectionSelect" style="font-weight: 500; color: #374151; font-size: 0.875rem;">Day Selection *</label>
+                                <select id="daySelectionSelect" name="day_selection" required style="padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; background: white; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none'">
+                                    <option value="">Select Day Combination</option>
+                                    <option value="saturday">Saturday (1 day)</option>
+                                    <option value="tuesday,thursday">TTH - Tuesday & Thursday (2 days)</option>
+                                    <option value="monday,wednesday,friday">MWF - Monday, Wednesday & Friday (3 days)</option>
+                                </select>
+                    </div>
+                    
+                    <!-- Add Schedule Button -->
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+                                <div style="height: 1.25rem;"></div> <!-- Spacer to align with other elements -->
+                                <button type="button" id="addScheduleBtn" style="background: #667eea; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;" onmouseover="this.style.background='#5a6fd8'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#667eea'; this.style.transform='translateY(0)'">
+                            <i class="fas fa-plus"></i>
+                            Add Schedule
+                        </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Spacing between dropdowns and table -->
+                    <div style="margin-top: 2rem;"></div>
+                    
+                    <!-- 1x4 Grid Layout - All Timetables Arranged Horizontally -->
+                    <div class="timetables-grid-single">
+                        <!-- Table 1 - Student -->
+                        <div class="timetable-section" data-table="1">
+                            <button class="table-enlarge-btn" onclick="toggleTableExpansion(1)">
+                                <i class="fas fa-expand-arrows-alt"></i> Enlarge
+                            </button>
+                            <h3 class="table-title">Student Schedule</h3>
+                            <div class="timetable-wrapper">
+                                <table class="timetable" data-table="1">
+                                    <thead>
+                                        <tr>
+                                            <th class="time-header">Time</th>
+                                            <th class="day-header day-monday">M</th>
+                                            <th class="day-header day-tuesday">T</th>
+                                            <th class="day-header day-wednesday">W</th>
+                                            <th class="day-header day-thursday">TH</th>
+                                            <th class="day-header day-friday">F</th>
+                                            <th class="day-header day-saturday">S</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Timetable rows will be generated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Table 2 - Teacher -->
+                        <div class="timetable-section" data-table="2">
+                            <button class="table-enlarge-btn" onclick="toggleTableExpansion(2)">
+                                <i class="fas fa-expand-arrows-alt"></i> Enlarge
+                            </button>
+                            <h3 class="table-title">Instructor Schedule</h3>
+                            <div class="timetable-wrapper">
+                                <table class="timetable" data-table="2">
+                                    <thead>
+                                        <tr>
+                                            <th class="time-header">Time</th>
+                                            <th class="day-header day-monday">M</th>
+                                            <th class="day-header day-tuesday">T</th>
+                                            <th class="day-header day-wednesday">W</th>
+                                            <th class="day-header day-thursday">TH</th>
+                                            <th class="day-header day-friday">F</th>
+                                            <th class="day-header day-saturday">S</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Timetable rows will be generated here -->
+                                    </tbody>
+                                </table>
+                        </div>
+                    </div>
+
+                        <!-- Table 3 - Room -->
+                        <div class="timetable-section" data-table="3">
+                            <button class="table-enlarge-btn" onclick="toggleTableExpansion(3)">
+                                <i class="fas fa-expand-arrows-alt"></i> Enlarge
+                            </button>
+                            <h3 class="table-title">Room Schedule</h3>
+                            <div class="timetable-wrapper">
+                                <table class="timetable" data-table="3">
+                                    <thead>
+                                        <tr>
+                                            <th class="time-header">Time</th>
+                                            <th class="day-header day-monday">M</th>
+                                            <th class="day-header day-tuesday">T</th>
+                                            <th class="day-header day-wednesday">W</th>
+                                            <th class="day-header day-thursday">TH</th>
+                                            <th class="day-header day-friday">F</th>
+                                            <th class="day-header day-saturday">S</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Timetable rows will be generated here -->
+                                    </tbody>
+                                </table>
+                                </div>
+                            </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+
+    <?php include __DIR__ . '/partials/modals.php'; ?>
+    <script src="../../assets/js/main.js"></script>
+    <script>
+      function showAlert(message, type){ try { showNotice(message, type); } catch(e) { alert(String(message)); } }
+      function modalConfirm(message){ try { return showConfirm(message, { confirmText: 'Confirm', cancelText: 'Cancel' }); } catch(e) { return Promise.resolve(confirm(String(message))); } }
+
+      // Initialize dashboard navigation cards
+      function initializeDashboardNavigation() {
+          const dashboardCards = document.querySelectorAll('.dashboard-card-nav[data-dashboard]');
+          
+          // Add click handlers for dashboard navigation
+          dashboardCards.forEach(card => {
+              card.addEventListener('click', function(e) {
+                  // Remove active class from all dashboard cards
+                  dashboardCards.forEach(c => c.classList.remove('active'));
+                  
+                  // Add active class to clicked card
+                  this.classList.add('active');
+                  
+                  // Navigate to the selected dashboard
+                  const dashboard = this.dataset.dashboard;
+                  const href = this.getAttribute('href');
+                  
+                  if (href && href !== '#') {
+                      // Add a small delay to show the active state before navigation
+                      setTimeout(() => {
+                          window.location.href = href;
+                      }, 150);
+                  }
+              });
+          });
+      }
+
+      // Generate college-style timetables (all 4 tables)
+      function generateTimetable() {
+          const mainTimes = [
+              '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
+              '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
+          ];
+          
+          const mainTimeValues = [
+              '07:00', '08:00', '09:00', '10:00', '11:00',
+              '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
+          ];
+          
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+          // Generate all 3 tables
+          for (let tableNum = 1; tableNum <= 3; tableNum++) {
+              const tbody = document.querySelector(`.timetable[data-table="${tableNum}"] tbody`);
+              if (!tbody) continue;
+
+              tbody.innerHTML = '';
+
+              mainTimes.forEach((time, index) => {
+                  // Main time row
+                  const mainRow = document.createElement('tr');
+                  mainRow.className = 'main-time-row';
+                  
+                  // Time cell with collapsible functionality
+                  const timeCell = document.createElement('td');
+                  timeCell.className = 'time-cell collapsible-time';
+                  timeCell.setAttribute('data-time', mainTimeValues[index]);
+                  
+                  // Split time into number and AM/PM
+                  const timeParts = time.split(' ');
+                  const timeNumber = timeParts[0];
+                  const timePeriod = timeParts[1];
+                  
+                  timeCell.innerHTML = `
+                      <div class="time-main" onclick="toggleTimeSlots('${mainTimeValues[index]}', ${tableNum})">
+                          <div class="time-number">${timeNumber}</div>
+                          <div class="time-period">${timePeriod}</div>
+                          <div class="time-toggle">
+                              <i class="fas fa-chevron-down"></i>
+                          </div>
+                      </div>
+                  `;
+                  
+                  mainRow.appendChild(timeCell);
+
+                  // Day cells for main time
+                  days.forEach(day => {
+                      const cell = document.createElement('td');
+                      cell.className = 'timetable-cell main-time-cell';
+                      cell.setAttribute('data-day', day);
+                      cell.setAttribute('data-time', mainTimeValues[index]);
+                      cell.setAttribute('data-table', tableNum);
+                      cell.addEventListener('click', () => openSubjectModal(day, mainTimeValues[index], cell, tableNum));
+                      mainRow.appendChild(cell);
+                  });
+
+                  tbody.appendChild(mainRow);
+                  
+                  // Collapsible sub-time row
+                  const subRow = document.createElement('tr');
+                  subRow.className = 'sub-time-row';
+                  subRow.style.display = 'none';
+                  subRow.setAttribute('data-parent-time', mainTimeValues[index]);
+                  
+                  // Sub-time cell
+                  const subTimeCell = document.createElement('td');
+                  subTimeCell.className = 'sub-time-cell';
+                  // Calculate sub-times with proper AM/PM
+                  const baseHour = parseInt(mainTimeValues[index].split(':')[0]);
+                  const period = timeParts[1];
+                  
+                  subTimeCell.innerHTML = `
+                      <div class="sub-times">
+                          <div class="sub-time" data-time="${mainTimeValues[index].replace(':00', ':15')}">${baseHour}:15 ${period}</div>
+                          <div class="sub-time" data-time="${mainTimeValues[index].replace(':00', ':30')}">${baseHour}:30 ${period}</div>
+                          <div class="sub-time" data-time="${mainTimeValues[index].replace(':00', ':45')}">${baseHour}:45 ${period}</div>
+                      </div>
+                  `;
+                  subRow.appendChild(subTimeCell);
+                  
+                  // Day cells for sub-times
+                  days.forEach(day => {
+                      const cell = document.createElement('td');
+                      cell.className = 'timetable-cell sub-time-cell';
+                      cell.setAttribute('data-day', day);
+                      cell.setAttribute('data-table', tableNum);
+                      
+                      // Create sub-time slots
+                      const subTimes = ['15', '30', '45'];
+                      subTimes.forEach(subTime => {
+                          const subCell = document.createElement('div');
+                          subCell.className = 'sub-time-slot';
+                          subCell.setAttribute('data-time', mainTimeValues[index].replace(':00', `:${subTime}`));
+                          subCell.addEventListener('click', () => openSubjectModal(day, mainTimeValues[index].replace(':00', `:${subTime}`), subCell, tableNum));
+                          cell.appendChild(subCell);
+                      });
+                      
+                      subRow.appendChild(cell);
+                  });
+
+                  tbody.appendChild(subRow);
+              });
+          }
+
+          // Initialize empty timetables
+          initializeEmptyTimetables();
+      }
+
+      // Initialize empty timetables (all 3 tables)
+      function initializeEmptyTimetables() {
+          const cells = document.querySelectorAll('.timetable-cell');
+          cells.forEach(cell => {
+              cell.innerHTML = '';
+              cell.classList.add('empty');
+          });
+      }
+
+      // Toggle time slots (show/hide 15-minute intervals)
+      function toggleTimeSlots(timeValue, tableNum) {
+          // Find the specific table's sub-row and toggle icon
+          const table = document.querySelector(`.timetable[data-table="${tableNum}"]`);
+          if (!table) return;
+          
+          const subRow = table.querySelector(`tr[data-parent-time="${timeValue}"]`);
+          const toggleIcon = table.querySelector(`[data-time="${timeValue}"] .time-toggle i`);
+          
+          if (subRow && toggleIcon) {
+              if (subRow.style.display === 'none') {
+                  subRow.style.display = 'table-row';
+                  toggleIcon.classList.remove('fa-chevron-down');
+                  toggleIcon.classList.add('fa-chevron-up');
+              } else {
+                  subRow.style.display = 'none';
+                  toggleIcon.classList.remove('fa-chevron-up');
+                  toggleIcon.classList.add('fa-chevron-down');
+              }
+          }
+      }
+
+      // Add subject to a specific cell
+      function addSubjectToCell(day, time, subjectName, teacher, room, type, tableNum = null) {
+          let cell;
+          if (tableNum) {
+              // Try to find main time cell first
+              cell = document.querySelector(`[data-day="${day}"][data-time="${time}"][data-table="${tableNum}"]`);
+              
+              // If not found, try to find sub-time slot
+              if (!cell) {
+                  cell = document.querySelector(`.sub-time-slot[data-day="${day}"][data-time="${time}"][data-table="${tableNum}"]`);
+              }
+          } else {
+              cell = document.querySelector(`[data-day="${day}"][data-time="${time}"]`);
+          }
+          
+          if (!cell) return;
+
+          cell.innerHTML = '';
+          cell.classList.remove('empty');
+
+          const subjectBlock = document.createElement('div');
+          subjectBlock.className = `subject-block subject-${type}`;
+          
+          // Adjust content based on cell type
+          if (cell.classList.contains('sub-time-slot')) {
+              subjectBlock.innerHTML = `
+                  <div class="subject-name-small">${subjectName}</div>
+                  <div class="subject-details-small">${teacher}</div>
+              `;
+          } else {
+          subjectBlock.innerHTML = `
+              <div class="subject-name">${subjectName}</div>
+              <div class="subject-details">${teacher} • ${room}</div>
+          `;
+          }
+          
+          subjectBlock.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const tableNumber = cell.getAttribute('data-table');
+              openEditSubjectModal(day, time, subjectName, teacher, room, type, cell, tableNumber);
+          });
+
+          cell.appendChild(subjectBlock);
+      }
+
+      // Timetable actions
+      function initializeTimetableActions() {
+          // Timetable actions can be added here if needed
+      }
+
+
+      // Extract year level from section name (e.g., "1A" -> "1st Year")
+      function extractYearLevelFromSection(sectionName) {
+          const match = sectionName.match(/^(\d+)/);
+          if (match) {
+              const yearNumber = parseInt(match[1]);
+              switch(yearNumber) {
+                  case 1: return '1st Year';
+                  case 2: return '2nd Year';
+                  case 3: return '3rd Year';
+                  case 4: return '4th Year';
+                  default: return null;
+              }
+          }
+          return null;
+      }
+
+      // Update semester options based on year level
+      function updateSemesterOptions(yearLevel) {
+          const semesterSelect = document.getElementById('semesterSelect');
+          if (!semesterSelect) return;
+
+          // Clear existing options
+          semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+
+          // Show First and Second Semester for all year levels
+          const firstSemester = document.createElement('option');
+          firstSemester.value = 'first';
+          firstSemester.textContent = 'First Semester';
+          semesterSelect.appendChild(firstSemester);
+
+          const secondSemester = document.createElement('option');
+          secondSemester.value = 'second';
+          secondSemester.textContent = 'Second Semester';
+          semesterSelect.appendChild(secondSemester);
+
+          // Only add Mid Year for 3rd Year
+          if (yearLevel === '3rd Year') {
+              const midYear = document.createElement('option');
+              midYear.value = 'summer';
+              midYear.textContent = 'Mid Year';
+              semesterSelect.appendChild(midYear);
+          }
+      }
+
+      // Load all active sections
+      async function loadSections() {
+          try {
+              const response = await fetch('../../api/get-active-sections.php');
+              const data = await response.json();
+              
+              const sectionSelect = document.getElementById('sectionSelect');
+              if (data.success && sectionSelect) {
+                  sectionSelect.innerHTML = '<option value="">Select Year and Section</option>';
+                  data.sections.forEach(section => {
+                      const option = document.createElement('option');
+                      option.value = section.section_id;
+                      option.textContent = section.section_name;
+                      sectionSelect.appendChild(option);
+                  });
+                  sectionSelect.disabled = false;
+              } else {
+                  showAlert('Failed to load sections', 'error');
+              }
+          } catch (error) {
+              console.error('Error loading sections:', error);
+              showAlert('Failed to load sections', 'error');
+          }
+      }
+
+      // Load courses based on semester and section (year level extracted from section name)
+      async function loadCourses(semester, sectionId, showLoading = true) {
+          try {
+              // Extract year level from section name
+              const sectionSelect = document.getElementById('sectionSelect');
+              const selectedSection = sectionSelect.options[sectionSelect.selectedIndex];
+              const sectionName = selectedSection ? selectedSection.textContent : '';
+              const yearLevel = extractYearLevelFromSection(sectionName);
+              
+              if (!yearLevel) {
+                  showAlert('Unable to determine year level from section name', 'error');
+                  return;
+              }
+              
+              console.log('Loading courses for:', { yearLevel, semester, sectionId });
+              
+              const courseSelect = document.getElementById('courseSelect');
+              if (showLoading && courseSelect) {
+                  courseSelect.innerHTML = '<option value="">Loading courses...</option>';
+                  courseSelect.disabled = true;
+              }
+              
+              // Add cache busting to ensure fresh data
+              const timestamp = new Date().getTime();
+              const url = `../../dashboards/admin/get_courses.php?year_level=${encodeURIComponent(yearLevel)}&semester=${encodeURIComponent(semester)}&section_id=${sectionId}&_t=${timestamp}`;
+              console.log('API URL:', url);
+              
+              const response = await fetch(url, {
+                  method: 'GET',
+                  cache: 'no-cache',
+                  headers: {
+                      'Cache-Control': 'no-cache, no-store, must-revalidate',
+                      'Pragma': 'no-cache',
+                      'Expires': '0'
+                  }
+              });
+              console.log('Response status:', response.status);
+              
+              if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              
+              const data = await response.json();
+              console.log('API Response:', data);
+              
+              if (data.success && courseSelect) {
+                  courseSelect.innerHTML = '<option value="">Select Course</option>';
+                  if (data.courses && data.courses.length > 0) {
+                      data.courses.forEach(course => {
+                          const option = document.createElement('option');
+                          option.value = course.id;
+                          option.textContent = `${course.code} - ${course.title}`;
+                          option.setAttribute('data-units', course.units || 'N/A');
+                          courseSelect.appendChild(option);
+                      });
+                      courseSelect.disabled = false;
+                  } else {
+                      const option = document.createElement('option');
+                      option.value = '';
+                      option.textContent = 'No courses available';
+                      courseSelect.appendChild(option);
+                      courseSelect.disabled = false;
+                  }
+              } else {
+                  console.error('API returned error:', data.message || 'Unknown error');
+                  showAlert(`Failed to load courses: ${data.message || 'Unknown error'}`, 'error');
+              }
+          } catch (error) {
+              console.error('Error loading courses:', error);
+              showAlert(`Failed to load courses: ${error.message}`, 'error');
+          }
+      }
+
+      // Open subject modal for adding new subject
+      function openSubjectModal(day = null, time = null, cell = null, tableNum = null) {
+          const subjectName = prompt('Enter subject name:');
+          if (!subjectName) return;
+
+          const teacher = prompt('Enter teacher name:');
+          if (!teacher) return;
+
+          const room = prompt('Enter room number:');
+          if (!room) return;
+
+          const subjectTypes = ['math', 'science', 'english', 'history', 'physics', 'chemistry', 'biology', 'computer', 'art', 'pe', 'break', 'lunch'];
+          const type = prompt(`Enter subject type (${subjectTypes.join(', ')}):`);
+          if (!type || !subjectTypes.includes(type)) return;
+
+          if (day && time && cell && tableNum) {
+              addSubjectToCell(day, time, subjectName, teacher, room, type, tableNum);
+          } else {
+              // Let user select table, day and time
+              const selectedTable = prompt('Enter table number (1, 2, 3, or 4):');
+              const selectedDay = prompt('Enter day (monday, tuesday, wednesday, thursday):');
+              const selectedTime = prompt('Enter time (08:00, 09:00, etc.):');
+              
+              if (selectedTable && selectedDay && selectedTime) {
+                  const targetCell = document.querySelector(`[data-day="${selectedDay}"][data-time="${selectedTime}"][data-table="${selectedTable}"]`);
+                  if (targetCell) {
+                      addSubjectToCell(selectedDay, selectedTime, subjectName, teacher, room, type, selectedTable);
+                  }
+              }
+          }
+      }
+
+      // Open edit subject modal
+      function openEditSubjectModal(day, time, subjectName, teacher, room, type, cell, tableNum) {
+          const newSubjectName = prompt('Edit subject name:', subjectName);
+          if (newSubjectName === null) return;
+
+          const newTeacher = prompt('Edit teacher name:', teacher);
+          if (newTeacher === null) return;
+
+          const newRoom = prompt('Edit room number:', room);
+          if (newRoom === null) return;
+
+          const subjectTypes = ['math', 'science', 'english', 'history', 'physics', 'chemistry', 'biology', 'computer', 'art', 'pe', 'break', 'lunch'];
+          const newType = prompt(`Edit subject type (${subjectTypes.join(', ')}):`, type);
+          if (newType === null) return;
+
+          if (newType && subjectTypes.includes(newType)) {
+              addSubjectToCell(day, time, newSubjectName, newTeacher, newRoom, newType, tableNum);
+          }
+      }
+
+
+
+
+      // Toggle table expansion
+              function toggleTableExpansion(tableNumber) {
+            const tableSection = document.querySelector(`[data-table="${tableNumber}"]`);
+            const button = tableSection.querySelector('.table-enlarge-btn');
+            const icon = button.querySelector('i');
+            const allTables = document.querySelectorAll('.timetable-section');
+            const backdrop = document.getElementById('timetableBackdrop');
+            
+            if (tableSection.classList.contains('expanded')) {
+                // Collapse the table
+                tableSection.classList.remove('expanded');
+                button.classList.remove('expanded');
+                button.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> Enlarge';
+                backdrop.classList.remove('active');
+                
+                // Remove backdrop blur from all other tables
+                allTables.forEach(table => {
+                    table.classList.remove('backdrop-blur');
+                });
+                
+                // Regenerate the table with collapsible functionality
+                generateTimetable();
+            } else {
+                // Collapse any other expanded tables first
+                const expandedTables = document.querySelectorAll('.timetable-section.expanded');
+                expandedTables.forEach(table => {
+                    table.classList.remove('expanded');
+                    const btn = table.querySelector('.table-enlarge-btn');
+                    btn.classList.remove('expanded');
+                    btn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> Enlarge';
+                });
+                
+                // Add backdrop blur to all other tables
+                allTables.forEach(table => {
+                    if (table !== tableSection) {
+                        table.classList.add('backdrop-blur');
+                    }
+                });
+                
+                // Expand the selected table
+                tableSection.classList.add('expanded');
+                button.classList.add('expanded');
+                button.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> Collapse';
+                backdrop.classList.add('active');
+                
+                // Regenerate the table with collapsible functionality
+                generateTimetable();
+            }
+        }
+
+        // Close expanded table when clicking on backdrop
+        document.getElementById('timetableBackdrop').addEventListener('click', function() {
+            const expandedTable = document.querySelector('.timetable-section.expanded');
+            if (expandedTable) {
+                const tableNumber = expandedTable.getAttribute('data-table');
+                toggleTableExpansion(tableNumber);
+            }
+        });
+
+      // Initialize when page loads
+      document.addEventListener('DOMContentLoaded', function() {
+          initializeDashboardNavigation();
+          generateTimetable();
+          initializeTimetableActions();
+          initializeModalControls();
+          initializeDaySelection();
+          initializeAddScheduleButton();
+          loadSections(); // Load sections on page load
+      });
+
+      // Initialize day selection functionality
+      function initializeDaySelection() {
+          const daySelectionSelect = document.getElementById('daySelectionSelect');
+          let selectedDays = [];
+          
+          // Handle dropdown change
+          daySelectionSelect?.addEventListener('change', function() {
+              const selectedValue = this.value;
+              
+              if (selectedValue) {
+                  // Parse the selected days from the dropdown value
+                  selectedDays = selectedValue.split(',');
+                  console.log('Selected days from dropdown:', selectedDays);
+                  
+                  // Highlight selected day columns in timetables
+                  highlightSelectedDayColumns(new Set(selectedDays));
+                  } else {
+                  // Clear selection
+                  selectedDays = [];
+                  clearDaySelections();
+                  console.log('Day selection cleared');
+              }
+          });
+      }
+      
+      // Filter day selection based on course units
+      function filterDaySelectionByUnits(units) {
+          const daySelectionSelect = document.getElementById('daySelectionSelect');
+          if (!daySelectionSelect) return;
+          
+          // Clear current selection
+          daySelectionSelect.value = '';
+          
+          // Hide all options first
+          const options = daySelectionSelect.querySelectorAll('option');
+          options.forEach(option => {
+              option.style.display = 'none';
+          });
+          
+          // Show only the appropriate option based on units
+          if (units === '3' || units === 3) {
+              // Show only MWF for 3 units
+              const mwfOption = daySelectionSelect.querySelector('option[value="monday,wednesday,friday"]');
+              if (mwfOption) {
+                  mwfOption.style.display = 'block';
+              }
+          } else if (units === '2' || units === 2) {
+              // Show only TTH for 2 units
+              const tthOption = daySelectionSelect.querySelector('option[value="tuesday,thursday"]');
+              if (tthOption) {
+                  tthOption.style.display = 'block';
+              }
+          } else if (units === '1' || units === 1) {
+              // Show only Saturday for 1 unit
+              const satOption = daySelectionSelect.querySelector('option[value="saturday"]');
+              if (satOption) {
+                  satOption.style.display = 'block';
+              }
+          } else {
+              // For unknown units, show all options
+              resetDaySelection();
+          }
+          
+          // Clear any existing day selection highlights
+              clearDaySelections();
+      }
+      
+      // Reset day selection to show all options
+      function resetDaySelection() {
+          const daySelectionSelect = document.getElementById('daySelectionSelect');
+          if (!daySelectionSelect) return;
+          
+          // Show all options
+          const options = daySelectionSelect.querySelectorAll('option');
+          options.forEach(option => {
+              option.style.display = 'block';
+          });
+          
+          // Clear selection
+          daySelectionSelect.value = '';
+          clearDaySelections();
+      }
+      
+      // Highlight selected day columns in all timetables
+      function highlightSelectedDayColumns(selectedDays) {
+          const timetables = document.querySelectorAll('.timetable');
+          
+          timetables.forEach(table => {
+              const dayHeaders = table.querySelectorAll('.day-header');
+              
+              dayHeaders.forEach(header => {
+                  const dayClass = Array.from(header.classList).find(cls => cls.startsWith('day-'));
+                  if (dayClass) {
+                      const day = dayClass.replace('day-', '');
+                      if (selectedDays.has(day)) {
+                          header.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                          header.style.color = 'white';
+                      } else {
+                          header.style.background = 'linear-gradient(135deg, #667eea, #5a6fd8)';
+                          header.style.color = 'white';
+                      }
+                  }
+              });
+          });
+      }
+      
+      // Get currently selected days
+      function getSelectedDays() {
+          const daySelectionSelect = document.getElementById('daySelectionSelect');
+          if (daySelectionSelect && daySelectionSelect.value) {
+              return daySelectionSelect.value.split(',');
+          }
+          return [];
+      }
+      
+      // Clear all day selections
+      function clearDaySelections() {
+          const daySelectionSelect = document.getElementById('daySelectionSelect');
+          if (daySelectionSelect) {
+              daySelectionSelect.value = '';
+          }
+          
+          // Reset day headers to default colors
+          const timetables = document.querySelectorAll('.timetable');
+          timetables.forEach(table => {
+              const dayHeaders = table.querySelectorAll('.day-header');
+              dayHeaders.forEach(header => {
+                  header.style.background = 'linear-gradient(135deg, #667eea, #5a6fd8)';
+                  header.style.color = 'white';
+              });
+          });
+      }
+
+      // Highlight available time slots in the timetable
+      function highlightAvailableTimeSlots(availableTimeSlots, selectedDays) {
+          selectedDays.forEach(day => {
+              availableTimeSlots.forEach(timeSlot => {
+                  // Highlight in all three timetables
+                  for (let tableNum = 1; tableNum <= 3; tableNum++) {
+                      const cell = document.querySelector(`[data-day="${day}"][data-time="${timeSlot}"][data-table="${tableNum}"]`);
+                      if (cell) {
+                          cell.classList.add('available-slot');
+                      }
+                  }
+              });
+          });
+      }
+      
+      // Highlight the selected time slot for confirmation
+      function highlightSelectedTimeSlot(timeSlot, selectedDays) {
+          selectedDays.forEach(day => {
+              // Highlight in all three timetables
+              for (let tableNum = 1; tableNum <= 3; tableNum++) {
+                  const cell = document.querySelector(`[data-day="${day}"][data-time="${timeSlot}"][data-table="${tableNum}"]`);
+                  if (cell) {
+                      cell.classList.add('selected-slot');
+                  }
+              }
+          });
+      }
+      
+      // Clear time slot highlights
+      function clearTimeSlotHighlights() {
+          const highlightedCells = document.querySelectorAll('.available-slot, .selected-slot');
+          highlightedCells.forEach(cell => {
+              cell.classList.remove('available-slot', 'selected-slot');
+          });
+      }
+      
+      // Show time slot selection interface
+      function showTimeSlotSelection(availableTimeSlots, selectedDays) {
+          const dayNames = {
+              'monday': 'Monday',
+              'tuesday': 'Tuesday', 
+              'wednesday': 'Wednesday',
+              'thursday': 'Thursday',
+              'friday': 'Friday',
+              'saturday': 'Saturday'
+          };
+          
+          const selectedDayNames = selectedDays.map(day => dayNames[day] || day).join(', ');
+          
+          const timeSlotOptions = availableTimeSlots.map((slot, index) => `${index + 1}. ${slot}`).join('\n');
+          const message = `Available time slots for ${selectedDayNames}:\n\n${timeSlotOptions}\n\nEnter the number of your choice (1-${availableTimeSlots.length}):`;
+          
+          const timeSlotChoice = prompt(message);
+          
+          if (!timeSlotChoice) {
+              return null; // User cancelled
+          }
+          
+          const selectedIndex = parseInt(timeSlotChoice) - 1;
+          if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= availableTimeSlots.length) {
+              showAlert('Invalid time slot selection. Please try again.', 'error');
+              return null;
+          }
+          
+          return availableTimeSlots[selectedIndex];
+      }
+      
+      // Find available time slots for selected days
+      function findAvailableTimeSlots(selectedDays) {
+          const allTimeSlots = [
+              '07:00', '08:00', '09:00', '10:00', '11:00',
+              '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
+          ];
+          
+          const availableSlots = [];
+          
+          // Check each time slot
+          allTimeSlots.forEach(timeSlot => {
+              let isAvailable = true;
+              
+              // Check if this time slot is available for ALL selected days
+              selectedDays.forEach(day => {
+                  // Check all three timetables for conflicts
+                  for (let tableNum = 1; tableNum <= 3; tableNum++) {
+                      const cell = document.querySelector(`[data-day="${day}"][data-time="${timeSlot}"][data-table="${tableNum}"]`);
+                      if (cell && !cell.classList.contains('empty') && cell.querySelector('.subject-block')) {
+                          // This cell already has a subject scheduled
+                          isAvailable = false;
+                          break;
+                      }
+                  }
+              });
+              
+              if (isAvailable) {
+                  availableSlots.push(timeSlot);
+              }
+          });
+          
+          return availableSlots;
+      }
+      
+      // Add schedule functionality
+      function addScheduleToTimetable() {
+          // Get selected values
+          const sectionSelect = document.getElementById('sectionSelect');
+          const semesterSelect = document.getElementById('semesterSelect');
+          const courseSelect = document.getElementById('courseSelect');
+          const selectedDays = getSelectedDays();
+          
+          // Validation
+          if (!sectionSelect.value) {
+              showAlert('Please select a section first', 'error');
+              return;
+          }
+          
+          if (!semesterSelect.value) {
+              showAlert('Please select a semester first', 'error');
+              return;
+          }
+          
+          if (!courseSelect.value) {
+              showAlert('Please select a course first', 'error');
+              return;
+          }
+          
+          if (selectedDays.length === 0) {
+              showAlert('Please select at least one day for scheduling', 'error');
+              return;
+          }
+          
+          if (selectedDays.length > 3) {
+              showAlert('You can select a maximum of 3 days only', 'error');
+              return;
+          }
+          
+          // Validate day combinations - now using dropdown, so combinations are pre-validated
+          const validCombinations = [
+              'saturday',
+              'tuesday,thursday', 
+              'monday,wednesday,friday'
+          ];
+          
+          const selectedValue = document.getElementById('daySelectionSelect').value;
+          if (!validCombinations.includes(selectedValue)) {
+              showAlert('Please select a valid day combination', 'error');
+              return;
+          }
+          
+          // Get course information
+          const selectedCourse = courseSelect.options[courseSelect.selectedIndex];
+          const courseText = selectedCourse.textContent;
+          const courseCode = courseText.split(' - ')[0];
+          const courseTitle = courseText.split(' - ')[1] || courseText;
+          
+          // Get section information
+          const selectedSection = sectionSelect.options[sectionSelect.selectedIndex];
+          const sectionName = selectedSection.textContent;
+          
+          // Find available time slots for the selected days
+          const availableTimeSlots = findAvailableTimeSlots(selectedDays);
+          
+          if (availableTimeSlots.length === 0) {
+              showAlert('No available time slots found for the selected days. Please try different days.', 'error');
+              return;
+          }
+          
+          // Auto-select the first available time slot
+          const timeSlot = availableTimeSlots[0];
+          
+          // Highlight the auto-selected time slot
+          highlightSelectedTimeSlot(timeSlot, selectedDays);
+          
+          // Show confirmation of auto-selected time slot
+          const dayNames = {
+              'monday': 'Monday',
+              'tuesday': 'Tuesday', 
+              'wednesday': 'Wednesday',
+              'thursday': 'Thursday',
+              'friday': 'Friday',
+              'saturday': 'Saturday'
+          };
+          const selectedDayNames = selectedDays.map(day => dayNames[day] || day).join(', ');
+          
+          const confirmMessage = `Course will be automatically scheduled at ${timeSlot} for ${selectedDayNames}.\n\nAvailable time slots found: ${availableTimeSlots.join(', ')}\n\nDo you want to proceed?`;
+          if (!confirm(confirmMessage)) {
+              // Clear highlights if user cancelled
+              clearTimeSlotHighlights();
+              return; // User cancelled
+          }
+          
+          // Clear highlights after confirmation
+          clearTimeSlotHighlights();
+          
+          // Ask for instructor
+          const instructor = prompt('Enter instructor name:');
+          if (!instructor) {
+              showAlert('Instructor name is required', 'error');
+              return;
+          }
+          
+          // Ask for room
+          const room = prompt('Enter room number:');
+          if (!room) {
+              showAlert('Room number is required', 'error');
+              return;
+          }
+          
+          // Ask for subject type
+          const subjectTypes = ['math', 'science', 'english', 'history', 'physics', 'chemistry', 'biology', 'computer', 'art', 'pe', 'break', 'lunch'];
+          const subjectType = prompt(`Enter subject type (${subjectTypes.join(', ')}):`);
+          if (!subjectType || !subjectTypes.includes(subjectType)) {
+              showAlert('Valid subject type is required', 'error');
+              return;
+          }
+          
+          // Schedule the course for each selected day
+          selectedDays.forEach(day => {
+              // Add to all three timetables (Student, Instructor, Room)
+              for (let tableNum = 1; tableNum <= 3; tableNum++) {
+                  addSubjectToCell(day, timeSlot, courseCode, instructor, room, subjectType, tableNum);
+              }
+          });
+          
+          // Show success message
+          showAlert(`Course "${courseCode}" scheduled successfully for ${selectedDays.join(', ')} at ${timeSlot}`, 'success');
+          
+          // Clear selections after successful scheduling
+          clearDaySelections();
+          courseSelect.value = '';
+          document.getElementById('daySelectionSelect').value = '';
+          
+          // Reset units display
+          const unitsDisplay = document.getElementById('courseUnitsDisplay');
+          unitsDisplay.textContent = 'Units';
+          unitsDisplay.style.background = '#f8fafc';
+          unitsDisplay.style.borderColor = '#d1d5db';
+          unitsDisplay.style.color = '#374151';
+      }
+      
+      // Initialize Add Schedule button
+      function initializeAddScheduleButton() {
+          document.getElementById('addScheduleBtn')?.addEventListener('click', function() {
+              addScheduleToTimetable();
+          });
+      }
+
+      // Initialize modal controls
+      function initializeModalControls() {
+          // Section change handler
+          document.getElementById('sectionSelect')?.addEventListener('change', function() {
+              const sectionId = this.value;
+              const semesterSelect = document.getElementById('semesterSelect');
+              const courseSelect = document.getElementById('courseSelect');
+              
+              if (sectionId) {
+                  // Extract year level from section name and update semester options
+                  const selectedSection = this.options[this.selectedIndex];
+                  const sectionName = selectedSection ? selectedSection.textContent : '';
+                  const yearLevel = extractYearLevelFromSection(sectionName);
+                  
+                  if (yearLevel) {
+                      updateSemesterOptions(yearLevel);
+                      // Enable semester dropdown and reset course dropdown
+                      semesterSelect.disabled = false;
+                      courseSelect.innerHTML = '<option value="">Select Course</option>';
+                      courseSelect.disabled = true;
+                      
+                      // Reset units display
+                      const unitsDisplay = document.getElementById('courseUnitsDisplay');
+                      unitsDisplay.textContent = 'Units';
+                      unitsDisplay.style.background = '#f8fafc';
+                      unitsDisplay.style.borderColor = '#d1d5db';
+                      unitsDisplay.style.color = '#374151';
+                      
+                      // Reset day selection
+                      resetDaySelection();
+                  }
+              } else {
+                  // Reset dependent dropdowns
+                  semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+                  courseSelect.innerHTML = '<option value="">Select Course</option>';
+                  semesterSelect.disabled = true;
+                  courseSelect.disabled = true;
+                  
+                  // Reset units display
+                  const unitsDisplay = document.getElementById('courseUnitsDisplay');
+                  unitsDisplay.textContent = 'Units';
+                  unitsDisplay.style.background = '#f8fafc';
+                  unitsDisplay.style.borderColor = '#d1d5db';
+                  unitsDisplay.style.color = '#374151';
+                  
+                  // Reset day selection
+                  resetDaySelection();
+              }
+          });
+
+          // Semester change handler
+          document.getElementById('semesterSelect')?.addEventListener('change', function() {
+              const semester = this.value;
+              const sectionId = document.getElementById('sectionSelect').value;
+              const courseSelect = document.getElementById('courseSelect');
+              
+              if (semester && sectionId) {
+                  loadCourses(semester, sectionId);
+              } else {
+                  courseSelect.innerHTML = '<option value="">Select Course</option>';
+                  courseSelect.disabled = true;
+                  
+                  // Reset units display
+                  const unitsDisplay = document.getElementById('courseUnitsDisplay');
+                  unitsDisplay.textContent = 'Units';
+                  unitsDisplay.style.background = '#f8fafc';
+                  unitsDisplay.style.borderColor = '#d1d5db';
+                  unitsDisplay.style.color = '#374151';
+                  
+                  // Reset day selection
+                  resetDaySelection();
+              }
+          });
+
+          // Course change handler
+          document.getElementById('courseSelect')?.addEventListener('change', function() {
+              const selectedOption = this.options[this.selectedIndex];
+              const unitsDisplay = document.getElementById('courseUnitsDisplay');
+              const daySelectionSelect = document.getElementById('daySelectionSelect');
+              
+              if (selectedOption && selectedOption.value) {
+                  const units = selectedOption.getAttribute('data-units') || 'N/A';
+                  unitsDisplay.textContent = `${units} units`;
+                  unitsDisplay.style.background = '#e0f2fe';
+                  unitsDisplay.style.borderColor = '#0ea5e9';
+                  unitsDisplay.style.color = '#0c4a6e';
+                  
+                  // Filter day selection based on course units
+                  filterDaySelectionByUnits(units);
+              } else {
+                  unitsDisplay.textContent = 'Units';
+                  unitsDisplay.style.background = '#f8fafc';
+                  unitsDisplay.style.borderColor = '#d1d5db';
+                  unitsDisplay.style.color = '#374151';
+                  
+                  // Reset day selection to show all options
+                  resetDaySelection();
+              }
+          });
+
+
+          // Refresh courses button
+          document.getElementById('refreshCourses')?.addEventListener('click', function() {
+              const sectionId = document.getElementById('sectionSelect').value;
+              const semester = document.getElementById('semesterSelect').value;
+              
+              if (sectionId && semester) {
+                  // Show loading state
+                  const refreshBtn = this;
+                  const originalText = refreshBtn.innerHTML;
+                  refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+                  refreshBtn.disabled = true;
+                  
+                  loadCourses(semester, sectionId).finally(() => {
+                      refreshBtn.innerHTML = originalText;
+                      refreshBtn.disabled = false;
+                  });
+              }
+          });
+
+          // Form submission handler
+          document.getElementById('addCourseForm')?.addEventListener('submit', function(e) {
+              e.preventDefault();
+              handleAddCourse();
+          });
+
+          // Close modal when clicking outside
+          document.getElementById('addCourseModal')?.addEventListener('click', function(e) {
+              if (e.target === this) {
+                  closeAddCourseModal();
+              }
+          });
+
+          // Listen for course updates from other dashboards
+          document.addEventListener('courseStatusChanged', function(e) {
+              console.log('Course status changed detected:', e.detail);
+              
+              // Refresh the courses list if both section and semester are selected
+              const sectionId = document.getElementById('sectionSelect').value;
+              const semester = document.getElementById('semesterSelect').value;
+              
+              if (sectionId && semester) {
+                  console.log('Refreshing courses due to external update');
+                  loadCourses(semester, sectionId);
+              }
+          });
+      }
+
+      // Handle add course form submission
+      function handleAddCourse() {
+          const formData = new FormData(document.getElementById('addCourseForm'));
+          const sectionId = formData.get('section_id');
+          const semester = formData.get('semester');
+          const courseId = formData.get('course_id');
+
+          if (!sectionId || !semester || !courseId) {
+              showAlert('Please fill in all required fields', 'error');
+              return;
+          }
+
+          // For now, just show a success message
+          // In a real implementation, you would send this data to a server endpoint
+          showAlert('Course added to schedule successfully!', 'success');
+          closeAddCourseModal();
+      }
+    </script>
+    <style>
+        /* Modal Animation */
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        /* Admin Layout Styles */
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8fafc;
+        }
+
+        .admin-sidebar {
+            width: 260px;
+            background: #ffffff;
+            color: #1f2937;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .sidebar-header {
+            padding: 2rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f8fafc;
+        }
+
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .admin-avatar {
+            width: 50px;
+            height: 50px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .admin-info h4 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .admin-info span {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex: 1;
+        }
+
+        .nav-item {
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            color: #6b7280;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            background: #f3f4f6;
+            color: #667eea;
+            border-left-color: #667eea;
+        }
+
+        .nav-link.active {
+            background: #667eea;
+            color: white;
+            border-left-color: #667eea;
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 0;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .logout-link {
+            color: #6b7280 !important;
+        }
+
+        .logout-link:hover {
+            background: #fef2f2 !important;
+            color: #ef4444 !important;
+            border-left-color: #ef4444 !important;
+        }
+
+        .admin-main {
+            flex: 1;
+            margin-left: 260px;
+            padding: 2rem;
+        }
+
+        .main-header {
+            margin-bottom: 2rem;
+        }
+
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .page-title i {
+            color: var(--primary-color);
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 2rem;
+        }
+
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6b7280;
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #5a6fd8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            font-size: 2rem;
+            color: white;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .empty-state h2 {
+            color: #1f2937;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+            line-height: 1.6;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* College Timetables Styles */
+        .timetables-container {
+            /* Removed duplicate styling - using parent .main-content styling instead */
+        }
+
+        .timetables-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .timetables-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .timetables-title i {
+            color: #667eea;
+        }
+
+        /* 1x3 Grid Layout - All Timetables Arranged Horizontally */
+        .timetables-grid-single {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            padding-top: 10px;
+        }
+
+        /* Legacy grids for backward compatibility */
+        .timetable-row-full {
+            margin-bottom: 1.5rem;
+        }
+
+        .timetables-grid-three {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .timetables-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .timetable-section {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 0.5rem;
+            border: 1px solid #e5e7eb;
+            min-height: 350px;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+            transition: width 0.3s ease, background 0.3s ease, border 0.3s ease, position 0.3s ease;
+            position: relative;
+        }
+
+        .timetable-section.expanded {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90vw;
+            max-width: 1200px;
+            background: #ffffff;
+            border: 2px solid #667eea;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            min-height: 600px;
+            max-height: 90vh;
+            overflow: hidden;
+        }
+
+        /* Add backdrop blur effect to other tables when one is expanded */
+        .timetable-section.backdrop-blur {
+            filter: blur(1px);
+            opacity: 0.6;
+            transition: filter 0.3s ease, opacity 0.3s ease;
+        }
+
+        /* Backdrop overlay for centered expanded table */
+        .timetable-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        .timetable-backdrop.active {
+            display: block;
+        }
+
+        /* Larger font sizes for expanded tables */
+        .timetable-section.expanded .table-title {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.3rem;
+        }
+
+        .timetable-section.expanded .timetable th {
+            padding: 0.4rem 0.3rem;
+            font-size: 0.9rem;
+        }
+
+        .timetable-section.expanded .time-header {
+            min-width: 80px;
+        }
+
+        .timetable-section.expanded .day-header {
+            min-width: 70px;
+        }
+
+        .timetable-section.expanded .timetable td {
+            height: 45px;
+        }
+
+        .timetable-section.expanded .time-cell {
+            font-size: 0.9rem;
+            padding: 0.3rem 0.2rem;
+            flex-direction: row;
+            gap: 0.2rem;
+        }
+
+        .timetable-section.expanded .time-number {
+            font-size: 0.9rem;
+        }
+
+        .timetable-section.expanded .time-period {
+            font-size: 0.8rem;
+            margin-top: 0;
+        }
+
+        .timetable-section.expanded .subject-block {
+            font-size: 0.8rem;
+            padding: 0.3rem;
+        }
+
+        .timetable-section.expanded .subject-block .subject-name {
+            font-size: 0.85rem;
+        }
+
+        .timetable-section.expanded .subject-block .subject-details {
+            font-size: 0.75rem;
+        }
+
+        .table-enlarge-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .table-enlarge-btn:hover {
+            background: #5a6fd8;
+            transform: scale(1.05);
+        }
+
+        .table-enlarge-btn.expanded {
+            background: #ef4444;
+        }
+
+        .table-enlarge-btn.expanded:hover {
+            background: #dc2626;
+        }
+
+        .table-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            padding-bottom: 0.25rem;
+            border-bottom: 2px solid #667eea;
+            transition: color 0.2s ease, border-color 0.2s ease, font-size 0.3s ease, margin-bottom 0.3s ease, padding-bottom 0.3s ease;
+        }
+
+        .timetable-section.expanded .table-title {
+            color: #667eea;
+            border-bottom-color: #4f46e5;
+        }
+
+        .timetable-wrapper {
+            overflow-x: auto;
+            margin-bottom: 0.5rem;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .timetable-section.expanded .timetable-wrapper {
+            overflow: hidden;
+        }
+
+        .timetable {
+            width: 100%;
+            max-width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            table-layout: fixed;
+        }
+
+        .timetable th {
+            background: linear-gradient(135deg, #667eea, #5a6fd8);
+            color: white;
+            padding: 0.25rem 0.125rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.65rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: padding 0.3s ease, font-size 0.3s ease;
+        }
+
+        .time-header {
+            background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
+            min-width: 45px;
+            transition: min-width 0.3s ease;
+        }
+
+        .day-header {
+            min-width: 40px;
+            transition: min-width 0.3s ease;
+        }
+
+        /* Day-specific color coding - Uniform blue like time header */
+        .day-monday {
+            background: linear-gradient(135deg, #667eea, #5a6fd8) !important;
+        }
+
+        .day-tuesday {
+            background: linear-gradient(135deg, #667eea, #5a6fd8) !important;
+        }
+
+        .day-wednesday {
+            background: linear-gradient(135deg, #667eea, #5a6fd8) !important;
+        }
+
+        .day-thursday {
+            background: linear-gradient(135deg, #667eea, #5a6fd8) !important;
+        }
+
+        .day-friday {
+            background: linear-gradient(135deg, #667eea, #5a6fd8) !important;
+        }
+
+        .day-saturday {
+            background: linear-gradient(135deg, #667eea, #5a6fd8) !important;
+        }
+
+        .timetable td {
+            border: 1px solid #e5e7eb;
+            padding: 0;
+            vertical-align: top;
+            height: 35px;
+            position: relative;
+            transition: height 0.3s ease;
+        }
+
+        .time-cell {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+            text-align: center;
+            font-size: 0.8rem;
+            border-right: 1px solid #d1d5db;
+            padding: 0.4rem 0.2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: font-size 0.3s ease, padding 0.3s ease;
+        }
+
+        .collapsible-time {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .collapsible-time:hover {
+            background: #e5e7eb;
+        }
+
+        .time-main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            width: 100%;
+            padding-right: 1.2rem;
+        }
+
+        .time-toggle {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            color: #6b7280;
+            transition: transform 0.2s ease;
+        }
+
+        .sub-time-row {
+            background: #f9fafb;
+        }
+
+        .sub-time-cell {
+            background: #f9fafb;
+            padding: 0.2rem;
+            border-right: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+
+        .sub-times {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            padding: 0.2rem;
+        }
+
+        .sub-time {
+            font-size: 0.7rem;
+            color: #6b7280;
+            text-align: center;
+            padding: 0.2rem;
+            background: #f3f4f6;
+            border-radius: 3px;
+        }
+
+        .sub-time-slot {
+            height: 28px;
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            color: #9ca3af;
+        }
+
+        .sub-time-slot:hover {
+            background: #f3f4f6;
+        }
+
+        .sub-time-slot.empty {
+            background: #f9fafb;
+        }
+
+        .time-number {
+            font-size: 0.8rem;
+            font-weight: 700;
+            line-height: 1;
+            transition: font-size 0.3s ease;
+        }
+
+        .time-period {
+            font-size: 0.7rem;
+            font-weight: 600;
+            line-height: 1;
+            margin-top: 0.1rem;
+            opacity: 0.8;
+            transition: font-size 0.3s ease;
+        }
+
+        .timetable-cell {
+            background: #ffffff;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            height: 45px;
+            vertical-align: top;
+        }
+
+        .timetable-cell:hover {
+            background: #f3f4f6;
+        }
+
+        .timetable-cell.empty {
+            background: #f9fafb;
+        }
+
+        /* Subject blocks with different colors */
+        .subject-block {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0.125rem;
+            border-radius: 3px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.55rem;
+            cursor: pointer;
+            transition: all 0.2s ease, font-size 0.3s ease, padding 0.3s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .subject-block:hover {
+            transform: scale(1.02);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subject-block .subject-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 0.05rem;
+            line-height: 1;
+            transition: font-size 0.3s ease;
+        }
+
+        .subject-block .subject-details {
+            font-size: 0.7rem;
+            opacity: 0.9;
+            line-height: 1;
+            transition: font-size 0.3s ease;
+        }
+
+        .subject-block .subject-name-small {
+            font-size: 0.6rem;
+            font-weight: 700;
+            margin-bottom: 0.02rem;
+            line-height: 1;
+        }
+
+        .subject-block .subject-details-small {
+            font-size: 0.5rem;
+            opacity: 0.9;
+            line-height: 1;
+        }
+
+        /* Color schemes for different subjects */
+        .subject-math { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .subject-science { background: linear-gradient(135deg, #10b981, #059669); }
+        .subject-english { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .subject-history { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .subject-physics { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .subject-chemistry { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+        .subject-biology { background: linear-gradient(135deg, #84cc16, #65a30d); }
+        .subject-computer { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .subject-art { background: linear-gradient(135deg, #ec4899, #db2777); }
+        .subject-pe { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+        .subject-break { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        .subject-lunch { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+
+        .timetable-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
+
+
+        .btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1400px) {
+            .timetables-grid-single {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.4rem;
+            }
+            
+            .timetables-grid-three {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+            
+            .timetables-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .timetables-grid-single {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.3rem;
+            }
+            
+            .timetables-grid-three {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .timetables-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+                @media (max-width: 768px) {
+            .timetables-container {
+                padding: 1rem;
+            }
+            
+            .timetables-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .header-left {
+                width: 100%;
+            }
+            
+            .timetables-grid-single {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.25rem;
+            }
+            
+            
+            .timetables-grid-three {
+                gap: 1rem;
+            }
+            
+            .timetables-grid {
+                gap: 1rem;
+            }
+            
+            .timetable-section {
+                padding: 0.75rem;
+                min-height: 350px;
+            }
+        }
+
+        /* Very small screens - stack vertically */
+        @media (max-width: 480px) {
+            .timetables-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.75rem;
+            }
+            
+            .timetable-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            .timetables-grid-single {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 200px;
+                justify-content: center;
+                padding: 0.5rem 1rem;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Dashboard Navigation Cards */
+        .dashboard-navigation-cards {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-card-nav {
+            background: #f8fafc;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: #1e293b;
+            font-weight: 700;
+            aspect-ratio: 2/1;
+            justify-content: flex-start;
+            min-height: 80px;
+        }
+
+        .dashboard-card-nav:hover {
+            background: rgba(238, 242, 255, 0.2);
+            color: #3730a3;
+            border-color: rgba(199, 210, 254, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard-card-nav.active {
+            background: rgba(99, 102, 241, 0.3);
+            color: #fff;
+            border-color: rgba(99, 102, 241, 0.6);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .dashboard-card-nav .dashboard-card-icon {
+            width: 45px;
+            height: 45px;
+            background: #6366f1;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+            flex-shrink: 0;
+        }
+
+        .dashboard-card-nav.active .dashboard-card-icon {
+            background: #6366f1;
+        }
+
+        .dashboard-card-nav .dashboard-card-content {
+            text-align: left;
+            flex: 1;
+        }
+
+        .dashboard-card-nav .dashboard-card-content h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .dashboard-card-nav .dashboard-card-content p {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        /* Day Selection Styles */
+        .day-selection-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .day-selection-container {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .day-btn {
+            flex: 1;
+            min-width: 40px;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            background: #f9fafb;
+            color: #374151;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .day-btn:hover {
+            background: #e5e7eb;
+            border-color: #9ca3af;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .day-btn.selected {
+            background: #667eea !important;
+            color: white !important;
+            border-color: #667eea !important;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
+        }
+
+        .day-btn.selected:hover {
+            background: #5a6fd8 !important;
+            border-color: #5a6fd8 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4) !important;
+        }
+
+        /* Available time slot highlighting */
+        .timetable-cell.available-slot {
+            background: #dbeafe !important;
+            border: 2px solid #3b82f6 !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+            animation: pulse-available 2s infinite;
+        }
+
+        /* Selected time slot highlighting */
+        .timetable-cell.selected-slot {
+            background: #dcfce7 !important;
+            border: 3px solid #16a34a !important;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.3) !important;
+            animation: pulse-selected 1.5s infinite;
+        }
+
+        @keyframes pulse-available {
+            0%, 100% {
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4);
+            }
+        }
+
+        @keyframes pulse-selected {
+            0%, 100% {
+                box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.5);
+            }
+        }
+
+        /* Responsive adjustments for day selection */
+        @media (max-width: 768px) {
+            .day-selection-container {
+                gap: 0.25rem;
+            }
+            
+            .day-btn {
+                min-width: 35px;
+                padding: 0.4rem 0.25rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .day-selection-container {
+                gap: 0.2rem;
+            }
+            
+            .day-btn {
+                min-width: 30px;
+                padding: 0.35rem 0.2rem;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Responsive adjustments for dashboard navigation cards */
+        @media (max-width: 1200px) {
+            .dashboard-navigation-cards {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1.25rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-navigation-cards {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+            
+            .dashboard-card-nav {
+                padding: 1.25rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .dashboard-navigation-cards {
+                grid-template-columns: 1fr;
+            gap: 1rem;
+            }
+        }
+    </style>
+</body>
+</html>
