@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHOW FORMS - Direct Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .form-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .form-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 3px solid #3498db;
+            border-radius: 5px;
+            font-size: 16px;
+            background: white;
+            box-sizing: border-box;
+        }
+        
+        input:focus, select:focus {
+            border-color: #e74c3c;
+            outline: none;
+            box-shadow: 0 0 5px rgba(231, 76, 60, 0.3);
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        .alert {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        
+        .password-wrapper {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 FORM FIELDS TEST - Can You See These?</h1>
+        
+        <div class="form-section">
+            <h2>📚 STUDENT REGISTRATION FORM</h2>
+            
+            <div class="form-group">
+                <label for="student_name">👤 Full Name *</label>
+                <input type="text" id="student_name" name="full_name" placeholder="Enter your full name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="student_id">🆔 Student ID Number *</label>
+                <input type="text" id="student_id" name="student_id" placeholder="Enter your 8-digit student ID" maxlength="8" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="student_section">🎓 Year & Section *</label>
+                <select id="student_section" name="year_section" required>
+                    <option value="">Select your year and section</option>
+                    <option value="1A">1A - First Year Section A</option>
+                    <option value="1B">1B - First Year Section B</option>
+                    <option value="2A">2A - Second Year Section A</option>
+                    <option value="2B">2B - Second Year Section B</option>
+                    <option value="3A">3A - Third Year Section A</option>
+                    <option value="3B">3B - Third Year Section B</option>
+                    <option value="4A">4A - Fourth Year Section A</option>
+                    <option value="4B">4B - Fourth Year Section B</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="student_password">🔒 Password *</label>
+                <div class="password-wrapper">
+                    <input type="password" id="student_password" name="password" placeholder="Enter your password" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword('student_password')">👁️</button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="student_confirm">🔒 Confirm Password *</label>
+                <div class="password-wrapper">
+                    <input type="password" id="student_confirm" name="confirm_password" placeholder="Confirm your password" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword('student_confirm')">👁️</button>
+                </div>
+            </div>
+            
+            <div class="alert">
+                ⚠️ <strong>Student Registration:</strong> Your account will require admin approval before you can log in.
+            </div>
+            
+            <button type="button" onclick="testStudentForm()">✅ Create Student Account</button>
+        </div>
+        
+        <div class="form-section">
+            <h2>👨‍🏫 TEACHER REGISTRATION FORM</h2>
+            
+            <div class="form-group">
+                <label for="teacher_name">👤 Full Name *</label>
+                <input type="text" id="teacher_name" name="full_name" placeholder="Enter your full name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="teacher_id">🆔 Instructor ID Number *</label>
+                <input type="text" id="teacher_id" name="teacher_id" placeholder="Enter your instructor ID" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="teacher_department">🏢 Department *</label>
+                <select id="teacher_department" name="department" required>
+                    <option value="">Select Department</option>
+                    <option value="College of Communication and Information Technology">College of Communication and Information Technology</option>
+                    <option value="College of Teacher Education">College of Teacher Education</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="teacher_password">🔒 Password *</label>
+                <div class="password-wrapper">
+                    <input type="password" id="teacher_password" name="password" placeholder="Enter your password" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword('teacher_password')">👁️</button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="teacher_confirm">🔒 Confirm Password *</label>
+                <div class="password-wrapper">
+                    <input type="password" id="teacher_confirm" name="confirm_password" placeholder="Confirm your password" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword('teacher_confirm')">👁️</button>
+                </div>
+            </div>
+            
+            <div class="alert">
+                ⚠️ <strong>Teacher Registration:</strong> Your account will require admin approval before you can log in.
+            </div>
+            
+            <button type="button" onclick="testTeacherForm()">✅ Create Teacher Account</button>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding: 20px; background: #e8f5e8; border-radius: 8px;">
+            <h3>🎯 TEST RESULTS</h3>
+            <p>If you can see the input fields above with blue borders, then the forms are working!</p>
+            <p>If you still can't see them, there might be a browser or CSS issue.</p>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
+            }
+        }
+        
+        function testStudentForm() {
+            const name = document.getElementById('student_name').value;
+            const id = document.getElementById('student_id').value;
+            const section = document.getElementById('student_section').value;
+            
+            if (name && id && section) {
+                alert('✅ Student form test successful!\n\nName: ' + name + '\nID: ' + id + '\nSection: ' + section);
+            } else {
+                alert('❌ Please fill in all required fields');
+            }
+        }
+        
+        function testTeacherForm() {
+            const name = document.getElementById('teacher_name').value;
+            const id = document.getElementById('teacher_id').value;
+            const dept = document.getElementById('teacher_department').value;
+            
+            if (name && id && dept) {
+                alert('✅ Teacher form test successful!\n\nName: ' + name + '\nID: ' + id + '\nDepartment: ' + dept);
+            } else {
+                alert('❌ Please fill in all required fields');
+            }
+        }
+        
+        // Test if inputs are visible
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input, select');
+            console.log('Found ' + inputs.length + ' form elements');
+            
+            inputs.forEach((input, index) => {
+                console.log('Input ' + (index + 1) + ':', input.tagName, input.type || 'select', input.placeholder || input.name);
+            });
+        });
+    </script>
+</body>
+</html>

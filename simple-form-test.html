@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Form Test</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+        }
+        .form-label i {
+            margin-right: 0.5rem;
+            color: #6b7280;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            background: #fafafa;
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border: none;
+            padding: 0.875rem 1.25rem;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+        }
+        .alert {
+            padding: 0.875rem 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.25rem;
+            border: 1px solid;
+        }
+        .alert-warning {
+            background: #fef3c7;
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+        .password-input-wrapper {
+            position: relative;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .password-toggle:hover {
+            color: #374151;
+            background: #f3f4f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-user-plus"></i> Simple Form Test</h1>
+        
+        <h2>Student Registration Form</h2>
+        <form>
+            <div class="form-group">
+                <label for="student_full_name" class="form-label">
+                    <i class="fas fa-user"></i> Full Name *
+                </label>
+                <input 
+                    type="text" 
+                    id="student_full_name" 
+                    name="full_name" 
+                    class="form-input" 
+                    placeholder="Enter your full name"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="student_id" class="form-label">
+                    <i class="fas fa-id-badge"></i> Student ID Number *
+                </label>
+                <input 
+                    type="text" 
+                    id="student_id" 
+                    name="student_id" 
+                    class="form-input" 
+                    placeholder="Enter your 8-digit student ID number"
+                    maxlength="8"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="student_year_section" class="form-label">
+                    <i class="fas fa-graduation-cap"></i> Year & Section *
+                </label>
+                <select id="student_year_section" name="year_section" class="form-input" required>
+                    <option value="">Select your year and section</option>
+                    <optgroup label="First Year">
+                        <option value="First Year_A">1A - First Year Section A</option>
+                        <option value="First Year_B">1B - First Year Section B</option>
+                    </optgroup>
+                    <optgroup label="Second Year">
+                        <option value="Second Year_A">2A - Second Year Section A</option>
+                        <option value="Second Year_B">2B - Second Year Section B</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="student_password" class="form-label">
+                    <i class="fas fa-lock"></i> Password *
+                </label>
+                <div class="password-input-wrapper">
+                    <input type="password" id="student_password" name="password" class="form-input" required>
+                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="student_confirm_password" class="form-label">
+                    <i class="fas fa-lock"></i> Confirm Password *
+                </label>
+                <div class="password-input-wrapper">
+                    <input type="password" id="student_confirm_password" name="confirm_password" class="form-input" required>
+                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <i class="fas fa-clock"></i>
+                <strong>Student Registration:</strong> Your account will require admin approval before you can log in.
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-user-plus"></i> Create Student Account
+                </button>
+            </div>
+        </form>
+
+        <hr style="margin: 2rem 0;">
+
+        <h2>Teacher Registration Form</h2>
+        <form>
+            <div class="form-group">
+                <label for="teacher_full_name" class="form-label">
+                    <i class="fas fa-user"></i> Full Name *
+                </label>
+                <input 
+                    type="text" 
+                    id="teacher_full_name" 
+                    name="full_name" 
+                    class="form-input" 
+                    placeholder="Enter your full name"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="teacher_id" class="form-label">
+                    <i class="fas fa-id-badge"></i> Instructor ID Number *
+                </label>
+                <input 
+                    type="text" 
+                    id="teacher_id" 
+                    name="teacher_id" 
+                    class="form-input" 
+                    placeholder="Enter your instructor ID"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="teacher_department" class="form-label">
+                    <i class="fas fa-building"></i> Department *
+                </label>
+                <select id="teacher_department" name="department" class="form-input" required>
+                    <option value="">Select Department</option>
+                    <option value="College of Communication and Information Technology">College of Communication and Information Technology</option>
+                    <option value="College of Teacher Education">College of Teacher Education</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="teacher_password" class="form-label">
+                    <i class="fas fa-lock"></i> Password *
+                </label>
+                <div class="password-input-wrapper">
+                    <input type="password" id="teacher_password" name="password" class="form-input" required>
+                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="teacher_confirm_password" class="form-label">
+                    <i class="fas fa-lock"></i> Confirm Password *
+                </label>
+                <div class="password-input-wrapper">
+                    <input type="password" id="teacher_confirm_password" name="confirm_password" class="form-input" required>
+                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <i class="fas fa-clock"></i>
+                <strong>Teacher Registration:</strong> Your account will require admin approval before you can log in.
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-user-plus"></i> Create Teacher Account
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Password toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordToggles = document.querySelectorAll('.password-toggle');
+            passwordToggles.forEach(toggle => {
+                toggle.addEventListener('click', function() {
+                    const input = this.parentElement.querySelector('input');
+                    const icon = this.querySelector('i');
+                    
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
