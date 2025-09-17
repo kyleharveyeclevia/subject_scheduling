@@ -52,28 +52,47 @@ try {
     
     echo "<p>✓ Database schema created successfully</p>";
     
+    // Define the user ID that you want to insert.
+    // Original value: 22120091
+    $adminUserID = "admin";
+    $adminRawPassword = "admin";
+    $adminEmail = 'admin2@gmail.com';
     // Check if default admin exists
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE user_id = '22120091'");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE user_id = '$adminUserID'");
     $stmt->execute();
     $adminExists = $stmt->fetchColumn();
     
+    
     if (!$adminExists) {
         // Create default admin account
-        $adminPassword = password_hash('@Admin1899', PASSWORD_DEFAULT);
+        $adminPassword = password_hash($adminRawPassword, PASSWORD_DEFAULT);
         
         $stmt = $pdo->prepare("INSERT INTO users (user_id, full_name, email, password_hash, role, status, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute(['22120091', 'System Administrator', 'admin@gmail.com', $adminPassword, 'admin', 'approved', 1]);
+        $stmt->execute([$adminUserID, 'System Administrator', $adminEmail, $adminPassword, 'admin', 'approved', 1]);
         
         $stmt = $pdo->prepare("INSERT INTO admins (user_id, admin_id) VALUES (?, ?)");
-        $stmt->execute(['22120091', '22120091']);
+        $stmt->execute([$adminUserID, $adminUserID]);
         
-        echo "<p>✓ Default admin account created</p>";
-        echo "<div style='background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0;'>";
-        echo "<h3>Default Admin Credentials:</h3>";
-        echo "<p><strong>ID:</strong> 22120091</p>";
-        echo "<p><strong>Password:</strong> @Admin1899</p>";
-        echo "<p><strong>Email:</strong> admin@gmail.com</p>";
-        echo "</div>";
+        if($adminUserID != "22120091"){
+            echo "<p>✓ Admin account created</p>";
+            echo "<div style='background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0;'>";
+            echo "<h3> Admin Credentials:</h3>";
+            echo "<p><strong>ID:</strong> $adminUserID</p>";
+            echo "<p><strong>Password:</strong> $adminRawPassword</p>";
+            echo "<p><strong>Email:</strong> $adminEmail</p>";
+            echo "</div>";
+        }
+
+        else{
+            echo "<p>✓ Default admin account created</p>";
+            echo "<div style='background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0;'>";
+            echo "<h3>Default Admin Credentials:</h3>";
+            echo "<p><strong>ID:</strong> 22120091</p>";
+            echo "<p><strong>Password:</strong> @Admin1899</p>";
+            echo "<p><strong>Email:</strong> admin@gmail.com</p>";
+            echo "</div>";
+        }
+        
     } else {
         echo "<p>✓ Default admin account already exists</p>";
     }
